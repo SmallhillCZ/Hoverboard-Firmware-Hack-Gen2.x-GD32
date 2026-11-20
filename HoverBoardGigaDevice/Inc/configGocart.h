@@ -32,7 +32,14 @@
 
 #if defined(MASTER)
 
-	#define REMOTE_UART		// ESP32 sends '/' iSpeed iSteer wStateMaster wStateSlave CRC16
+	#ifdef GOCART_TEST
+		// bench test without ESP32: motors zigzag slowly (pwm +-200 of 1000), LED panel follows the hall sensors
+		#define REMOTE_DUMMY
+		#define REMOTE_PERIOD 6
+		#define TEST_HALL2LED
+	#else
+		#define REMOTE_UART		// ESP32 sends '/' iSpeed iSteer wStateMaster wStateSlave CRC16
+	#endif
 
 	#define SPEED_COEFFICIENT   -1	// direction is handled in the ESP32 software
 	#define STEER_COEFFICIENT   1
