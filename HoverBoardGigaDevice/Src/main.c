@@ -347,7 +347,7 @@ int main (void)
 			#ifdef USART_MASTERSLAVE
 				// Decide if slave will be enabled
 				if  ((enable == SET && timedOut == RESET))
-					wStateSlave = wStateSlave & !STATE_Disable;
+					wStateSlave = wStateSlave & ~STATE_Disable;
 				else
 					wStateSlave |= STATE_Disable;
 
@@ -466,8 +466,8 @@ int main (void)
 		#ifdef UPPER_LED
 			digitalWrite(UPPER_LED,wState & STATE_LedUp ? SET : RESET);
 		#endif
-		#ifdef UPPER_LED
-			digitalWrite(UPPER_LED,wState & STATE_LedDown ? SET : RESET);
+		#ifdef LOWER_LED
+			digitalWrite(LOWER_LED,wState & STATE_LedDown ? SET : RESET);
 		#endif
 
 		if (wState & STATE_Shutoff)	ShutOff();
