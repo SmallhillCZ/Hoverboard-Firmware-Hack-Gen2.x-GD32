@@ -330,7 +330,11 @@ void PWM_initOld(void)
 
 	// Set up the break parameter struct
 	timerBldc_break_parameter_struct.runoffstate			= TIMER_ROS_STATE_ENABLE;
-	timerBldc_break_parameter_struct.ideloffstate 		= TIMER_IOS_STATE_DISABLE;
+	#ifdef CONFIG_GOCART
+		timerBldc_break_parameter_struct.ideloffstate 		= TIMER_IOS_STATE_ENABLE;	// outputs off: drive the idle levels (high side LOW, low side HIGH = off), not floating
+	#else
+		timerBldc_break_parameter_struct.ideloffstate 		= TIMER_IOS_STATE_DISABLE;
+	#endif
 	timerBldc_break_parameter_struct.protectmode			= TIMER_CCHP_PROT_OFF;
 	timerBldc_break_parameter_struct.outputautostate 	= TIMER_OUTAUTO_ENABLE;
 	timerBldc_break_parameter_struct.breakpolarity		= TIMER_BREAK_POLARITY_LOW;
@@ -451,7 +455,11 @@ void PWM_init(void)
 
 	// Set up the break parameter struct
 	timerBldc_break_parameter_struct.runoffstate			= TIMER_ROS_STATE_ENABLE;
-	timerBldc_break_parameter_struct.ideloffstate 		= TIMER_IOS_STATE_DISABLE;
+	#ifdef CONFIG_GOCART
+		timerBldc_break_parameter_struct.ideloffstate 		= TIMER_IOS_STATE_ENABLE;	// outputs off: drive the idle levels (high side LOW, low side HIGH = off), not floating
+	#else
+		timerBldc_break_parameter_struct.ideloffstate 		= TIMER_IOS_STATE_DISABLE;
+	#endif
 	timerBldc_break_parameter_struct.protectmode			= TIMER_CCHP_PROT_OFF;
 	timerBldc_break_parameter_struct.outputautostate 	= TIMER_OUTAUTO_ENABLE;
 	timerBldc_break_parameter_struct.breakpolarity		= TIMER_BREAK_POLARITY_LOW;

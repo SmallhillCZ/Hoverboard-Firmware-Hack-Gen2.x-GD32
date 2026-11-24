@@ -224,6 +224,11 @@ void CalculateBLDC(void)
 		if (ABS(bldc_outputFilterPwm)<100)
 		{
 			timer_automatic_output_disable(TIMER_BLDC);		
+			#ifdef CONFIG_GOCART
+				// OAEN only stops the automatic re-enable, the outputs kept switching (pwm 0 = shorted windings = brake).
+				// Really switch the outputs off (idle state = all mosfets off), wheels turn freely.
+				timer_primary_output_config(TIMER_BLDC, DISABLE);
+			#endif
 		}
 		//DEBUG_LedSet((steerCounter%20) > 10,2);	// macro. iCol: 0=green, 1=organge, 2=red
   	}
@@ -282,6 +287,9 @@ void CalculateBLDC(void)
 	{
 			// Invalid position - disable PWM
 			timer_automatic_output_disable(TIMER_BLDC);
+			#ifdef CONFIG_GOCART
+				timer_primary_output_config(TIMER_BLDC, DISABLE);
+			#endif
 			//DEBUG_LedSet(SET,2);	// macro. iCol: 0=green, 1=organge, 2=red
 			return;
 	}
