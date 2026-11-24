@@ -46,6 +46,22 @@ extern DataSlave oDataSlave;
 extern uint8_t  wStateSlave;
 extern uint8_t  wState;
 
+#ifdef REMOTE_UART_WHEELS
+extern int16_t speedMaster;
+extern int16_t speedSlave;
+extern uint8_t remoteBuzzer;
+extern uint8_t wHoverFlags;
+
+typedef struct {			// '#pragma pack(1)' needed to get correct sizeof()	 GoCart: 10 bytes
+   uint8_t cStart;		//  = '/';
+   int16_t  iSpeedMaster;	// pwm master wheel -1000..1000
+   int16_t  iSpeedSlave;	// pwm slave wheel -1000..1000
+   uint8_t  wStateMaster;   // 1=ledGreen, 2=ledOrange, 4=ledRed, 8=ledUp, 16=ledDown   , 32=Battery3Led, 64=Disable, 128=ShutOff
+   uint8_t  wStateSlave;   // 1=ledGreen, 2=ledOrange, 4=ledRed, 8=ledUp, 16=ledDown   , 32=Battery3Led, 64=Disable, 128=ShutOff
+   uint8_t  iBuzzer;		// 0 = off, 1..255 = tone half period in 0.5 ms (1 = 1 kHz, 4 = 250 Hz)
+   uint16_t checksum;
+} SerialServer2Hover;
+#else
 typedef struct {			// '#pragma pack(1)' needed to get correct sizeof()
    uint8_t cStart;		//  = '/';
    //uint16_t cStart;		//  = #define START_FRAME         0xABCD
@@ -55,6 +71,7 @@ typedef struct {			// '#pragma pack(1)' needed to get correct sizeof()
    uint8_t  wStateSlave;   // 1=ledGreen, 2=ledOrange, 4=ledRed, 8=ledUp, 16=ledDown   , 32=Battery3Led, 64=Disable, 128=ShutOff
    uint16_t checksum;
 } SerialServer2Hover;
+#endif
 
 static uint8_t aReceiveBuffer[sizeof(SerialServer2Hover)];
 
@@ -76,6 +93,9 @@ typedef struct{				// '#pragma pack(1)' needed to get correct sizeof()
 		int16_t     iAccelY;
 		int16_t     iAccelZ;
 		int16_t     iTemperature;
+	#endif
+	#ifdef REMOTE_UART_WHEELS
+		uint8_t wFlags;		// 1 = charger connected (GoCart: frame has 23 bytes)
 	#endif
 	uint16_t checksum;
 } SerialHover2Server;
@@ -140,6 +160,10 @@ void RemoteUpdate(void)
 		oData.iTemperature = mpuData.temperature;
 	#endif
 
+	#ifdef REMOTE_UART_WHEELS
+		oData.wFlags = wHoverFlags;
+	#endif
+
 	oData.checksum = 	CalcCRC((uint8_t*) &oData, sizeof(oData) - 2);	// (first bytes except crc)
 	SendBuffer(USART_REMOTE, (uint8_t*) &oData, sizeof(oData));
 
@@ -174,8 +198,14 @@ void RemoteCallback(void)
 			{
 				iTimeLastRx = millis();
 				bRemoteTimeout = 0;
-				speed = pData->iSpeed;
-				steer = pData->iSteer;
+				#ifdef REMOTE_UART_WHEELS
+					speedMaster = pData->iSpeedMaster;
+					speedSlave = pData->iSpeedSlave;
+					remoteBuzzer = pData->iBuzzer;
+				#else
+					speed = pData->iSpeed;
+					steer = pData->iSteer;
+				#endif
 				wState = pData->wStateMaster;
 				wStateSlave = pData->wStateSlave;
 				//if (speed > 300) speed = 300;	else if (speed < -300) speed = -300;		// for testing this function

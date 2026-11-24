@@ -28,7 +28,7 @@
 //#define BATTERY_LOW_SHUTOFF
 #define BATTERY_LOW_BEEP
 
-#define BEEP_BACKWARDS
+//#define BEEP_BACKWARDS		// off: buzzer is controlled by the ESP32 (REMOTE_UART_WHEELS)
 
 #if defined(MASTER)
 
@@ -38,10 +38,12 @@
 		#define REMOTE_PERIOD 6
 		#define TEST_HALL2LED
 	#else
-		#define REMOTE_UART		// ESP32 sends '/' iSpeed iSteer wStateMaster wStateSlave CRC16
+		#define REMOTE_UART		// serial protocol to the ESP32, see remoteUart.c
+		#define REMOTE_UART_WHEELS	// GoCart protocol: ESP32 sends '/' iSpeedMaster iSpeedSlave wStateMaster wStateSlave iBuzzer CRC16 (10 bytes),
+									// board answers 0xABCD speedL/R volt ampL/R odomL/R wFlags CRC16 (23 bytes), wFlags 1 = charger
 	#endif
 
-	#define SPEED_COEFFICIENT   -1	// direction is handled in the ESP32 software
+	#define SPEED_COEFFICIENT   -1	// direction is handled in the ESP32 software (REMOTE_UART_WHEELS: applied to both wheels)
 	#define STEER_COEFFICIENT   1
 
 	#define MASTER_OR_SINGLE

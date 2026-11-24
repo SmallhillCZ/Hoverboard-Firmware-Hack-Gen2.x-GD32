@@ -50,6 +50,8 @@ int16_t speedLimit = 1000;
 #define STATE_Disable 64
 #define STATE_Shutoff 128
 
+#define HOVER_FLAG_Charger 1	// REMOTE_UART_WHEELS feedback: charger connected (motors are disabled)
+
 uint8_t  wState = STATE_LedBattLevel;   // 1=ledGreen, 2=ledOrange, 4=ledRed, 8=ledUp, 16=ledDown   , 32=Battery3Led, 64=Disable, 128=ShutOff
 uint8_t  wStateSlave = STATE_LedBattLevel;   // 1=ledGreen, 2=ledOrange, 4=ledRed, 8=ledUp, 16=ledDown   , 32=Battery3Led, 64=Disable, 128=ShutOff
 
@@ -62,6 +64,12 @@ int32_t ShutOff(void);
 #ifdef MASTER_OR_SINGLE
 
 int32_t steer = 0; 												// global variable for steering. -1000 to 1000
+#ifdef REMOTE_UART_WHEELS
+	int16_t speedMaster = 0;		// REMOTE_UART_WHEELS: pwm of the master wheel -1000..1000 (no mixing in the board)
+	int16_t speedSlave = 0;			// REMOTE_UART_WHEELS: pwm of the slave wheel -1000..1000
+	uint8_t remoteBuzzer = 0;		// REMOTE_UART_WHEELS: buzzer tone from ESP32, 0 = off, 1..255 = half period in 0.5 ms (1 = 1 kHz, 2 = 500 Hz, ...)
+	uint8_t wHoverFlags = 0;		// REMOTE_UART_WHEELS: flags sent back to ESP32, 1 = charger connected
+#endif
 FlagStatus activateWeakening = RESET;			// global variable for weakening
 FlagStatus beepsBackwards = SET;  			// global variable for beeps backwards
 			
@@ -304,7 +312,22 @@ int main (void)
 */			
 			if (speedShutoff)	speed = ShutOff();
 			
-			#ifdef PILOT_DEFAULT
+			#if defined(REMOTE_UART_WHEELS)
+				// GoCart: ESP32 sends the pwm of each wheel, no speed/steer mixing (and no expo) in the board.
+				// Values between -50 and 50 (STAND_STILL_THRESHOLD) on BOTH wheels mean absolutely no pwm,
+				// one wheel alone may stay small (fine trim, slow pivot).
+				if (	speedMaster < STAND_STILL_THRESHOLD && speedMaster > -STAND_STILL_THRESHOLD
+					&&	speedSlave  < STAND_STILL_THRESHOLD && speedSlave  > -STAND_STILL_THRESHOLD	)
+				{
+					pwmMaster = pwmSlave = 0;
+				}
+				else
+				{
+					pwmMaster = CLAMP(speedMaster, -speedLimit, speedLimit) * SPEED_COEFFICIENT;
+					pwmSlave  = CLAMP(speedSlave,  -speedLimit, speedLimit) * SPEED_COEFFICIENT;
+				}
+				speed = (speedMaster + speedSlave) / 2;		// only informative (BEEP_BACKWARDS)
+			#elif defined(PILOT_DEFAULT)
 				if (iDrivingMode == 0)
 				{
 					// Calculate expo rate for less steering with higher speeds
@@ -396,6 +419,14 @@ int main (void)
 				#endif
 			}
 
+			#ifdef REMOTE_UART_WHEELS
+				// buzzer requested by the ESP32 (only when the battery is fine: low battery beeping has priority)
+				if (remoteBuzzer && !bRemoteTimeout && batteryVoltage > BAT_LOW_LVL1)
+				{
+					BuzzerSet(remoteBuzzer,0)	// (iFrequency, iPattern) pattern 0 = continuous, rhythm is made by the ESP32
+				}
+			#endif
+
 			#ifdef BUTTON
 				// Shut device off when button is pressed
 				if (BUTTON_PUSHED == digitalRead(BUTTON))
@@ -429,6 +460,10 @@ int main (void)
 		#if defined(CHARGE_STATE) && defined(MASTER_OR_SINGLE)
 			chargeStateLowActive = digitalRead(CHARGE_STATE);
 			enable = chargeStateLowActive;
+			#ifdef REMOTE_UART_WHEELS
+				if (chargeStateLowActive)	wHoverFlags &= ~HOVER_FLAG_Charger;
+				else 						wHoverFlags |= HOVER_FLAG_Charger;
+			#endif
 		#else
 			enable = SET;			
 		#endif
