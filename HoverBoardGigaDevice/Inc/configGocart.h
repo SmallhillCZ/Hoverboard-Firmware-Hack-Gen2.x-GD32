@@ -41,6 +41,8 @@
 		#define REMOTE_UART		// serial protocol to the ESP32, see remoteUart.c
 		#define REMOTE_UART_WHEELS	// GoCart protocol: ESP32 sends '/' iSpeedMaster iSpeedSlave wStateMaster wStateSlave iBuzzer CRC16 (10 bytes),
 									// board answers 0xABCD speedL/R volt ampL/R odomL/R wFlags CRC16 (23 bytes), wFlags 1 = charger
+		#define REMOTE_BAUD 57600		// 19200 was too slow for 50 feedback frames/s; 115200 is risky with the 1N5819 + pull-up on the RX line
+		#define SEND_INTERVAL_MS 20		// feedback (wheel speeds, odometry) 50x per second for the wheel speed control in the ESP32
 	#endif
 
 	#define SPEED_COEFFICIENT   -1	// direction is handled in the ESP32 software (REMOTE_UART_WHEELS: applied to both wheels)

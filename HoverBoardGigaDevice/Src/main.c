@@ -273,6 +273,9 @@ int main (void)
 
 	while(1)
 	{
+		#if defined(REMOTE_UART_WHEELS) && defined(MASTER_OR_SINGLE)
+			RemoteTxPump();		// feedback frame to the ESP32 byte by byte, without blocking the loop
+		#endif
 		if (millis() < iTimeNextLoop)	
 			continue;
 		iTimeNextLoop = millis() + DELAY_IN_MAIN_LOOP;

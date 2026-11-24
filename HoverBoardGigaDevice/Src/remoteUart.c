@@ -107,6 +107,18 @@ int16_t aiDebug[7];
 //static uint8_t aDebug[sizeof(SerialServer2Hover)];
 
 
+#ifdef REMOTE_UART_WHEELS
+	// non-blocking transmit: the main loop must not wait ~4 ms for every feedback frame (sent every SEND_INTERVAL_MS)
+	static uint8_t aTxBuffer[sizeof(SerialHover2Server)];
+	static uint8_t iTxPos = sizeof(SerialHover2Server);	// >= size: nothing to send
+
+	void RemoteTxPump(void)
+	{
+		if (iTxPos < sizeof(aTxBuffer) && usart_flag_get(USART_REMOTE, USART_FLAG_TBE) != RESET)
+			usart_data_transmit(USART_REMOTE, aTxBuffer[iTxPos++]);
+	}
+#endif
+
 uint32_t iTimeLastRx = 0;
 uint32_t iTimeNextTx = 0;
 
@@ -165,7 +177,16 @@ void RemoteUpdate(void)
 	#endif
 
 	oData.checksum = 	CalcCRC((uint8_t*) &oData, sizeof(oData) - 2);	// (first bytes except crc)
-	SendBuffer(USART_REMOTE, (uint8_t*) &oData, sizeof(oData));
+	#ifdef REMOTE_UART_WHEELS
+		if (iTxPos >= sizeof(aTxBuffer))		// previous frame completely sent, else skip this one
+		{
+			memcpy(aTxBuffer, &oData, sizeof(oData));
+			iTxPos = 0;
+			RemoteTxPump();
+		}
+	#else
+		SendBuffer(USART_REMOTE, (uint8_t*) &oData, sizeof(oData));
+	#endif
 
 
 	//oDataSlave.wState = 11;
