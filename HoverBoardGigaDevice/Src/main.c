@@ -316,6 +316,12 @@ int main (void)
 			if (speedShutoff)	speed = ShutOff();
 			
 			#if defined(REMOTE_UART_WHEELS)
+				// GoCart: no command from the ESP32 (0.5 s / 2 s) or charger connected -> pwm 0 = brake with shorted windings.
+				// The outputs stay active, only STATE_Disable (B on the controller) lets the wheels turn freely.
+				if (bRemoteTimeout || timedOut == SET || !chargeStateLowActive)
+				{
+					speedMaster = speedSlave = 0;
+				}
 				// GoCart: ESP32 sends the pwm of each wheel, no speed/steer mixing (and no expo) in the board.
 				// Values between -50 and 50 (STAND_STILL_THRESHOLD) on BOTH wheels mean absolutely no pwm,
 				// one wheel alone may stay small (fine trim, slow pivot).
@@ -372,7 +378,11 @@ int main (void)
 
 			#ifdef USART_MASTERSLAVE
 				// Decide if slave will be enabled
+				#ifdef REMOTE_UART_WHEELS
+				if  (enable == SET)		// slave brakes with pwm 0 on timeout, freewheels only on STATE_Disable
+				#else
 				if  ((enable == SET && timedOut == RESET))
+				#endif
 					wStateSlave = wStateSlave & ~STATE_Disable;
 				else
 					wStateSlave |= STATE_Disable;
@@ -462,7 +472,11 @@ int main (void)
 
 		#if defined(CHARGE_STATE) && defined(MASTER_OR_SINGLE)
 			chargeStateLowActive = digitalRead(CHARGE_STATE);
-			enable = chargeStateLowActive;
+			#ifdef REMOTE_UART_WHEELS
+				enable = SET;		// charger: pwm forced to 0 above (brake), outputs stay active
+			#else
+				enable = chargeStateLowActive;
+			#endif
 			#ifdef REMOTE_UART_WHEELS
 				if (chargeStateLowActive)	wHoverFlags &= ~HOVER_FLAG_Charger;
 				else 						wHoverFlags |= HOVER_FLAG_Charger;
@@ -471,7 +485,11 @@ int main (void)
 			enable = SET;			
 		#endif
 		
-		if (bPilotTimeout || bRemoteTimeout || (wState & STATE_Disable))	enable = RESET;
+		#ifdef REMOTE_UART_WHEELS
+			if (wState & STATE_Disable)	enable = RESET;		// only B (neutral) switches the outputs off
+		#else
+			if (bPilotTimeout || bRemoteTimeout || (wState & STATE_Disable))	enable = RESET;
+		#endif
 		
 		// Enable is depending on arm switch
 		//#ifdef USART_CRSF

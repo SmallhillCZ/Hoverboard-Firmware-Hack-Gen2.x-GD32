@@ -217,6 +217,16 @@ void CalculateBLDC(void)
 	
   // Disable PWM when current limit is reached (current chopping), enable is not set or timeout is reached
 	//DEBUG_LedSet((steerCounter%20) > 10,2);	// macro. iCol: 0=green, 1=organge, 2=red
+	#ifdef CONFIG_GOCART
+	if (timedOut == SET && currentDC <= DC_CUR_LIMIT && bldc_enable == SET)
+	{
+		// GoCart: no commands for TIMEOUT_MS -> soft brake to pwm 0 and keep the outputs active (shorted windings brake)
+		iDrivingModeOverride = bldc_inputFilterPwm = iBldcInput = 0;
+		SetFilter(14);	// soft brake
+		timer_automatic_output_enable(TIMER_BLDC);
+	}
+	else
+	#endif
 	if (currentDC > DC_CUR_LIMIT  || bldc_enable == RESET  || timedOut == SET)	//		
 	{
 		iDrivingModeOverride = bldc_inputFilterPwm = iBldcInput = 0;
